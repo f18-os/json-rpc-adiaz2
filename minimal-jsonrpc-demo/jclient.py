@@ -10,7 +10,7 @@ from bsonrpc.framing import (
 
 # Cut-the-corners TCP Client:
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect(('localhost', 50003))
+s.connect(('localhost', 50017))
 
 rpc = JSONRpc(s,framing_cls=JSONFramingNone)
 server = rpc.get_peer_proxy()
@@ -21,30 +21,40 @@ leaf2 = node("leaf2")
 
 root = node("root", [leaf1, leaf1, leaf2])
 
-print("graph before increment")
-root.show()
+def JSONToGraph(jsonString):
+    jsonArr = jsonString.split('\n')
+    name = jsonArr[0].split(':')[1]
+    val = jsonArr[1].split(':')[1]
+    children = []
+    for c in jsonString[jsonString.find("{")+1:].split(',')[:-1]:
+        children.append(JSONToGraph(c))
+    graph = node(name, children)
+    graph.val = int(val)
+    return graph
 
 def graphToJSON(graph):
     jsonString = 'name: ' + graph.name + '\n'
     jsonString += 'val: ' + str(graph.val) + '\n'
-    jsonString += 'children: {\n'
+    jsonString += 'children: {'
     for c in graph.children:
          jsonString += graphToJSON(c)
          jsonString += ','
     jsonString += '}'
     return jsonString
 
-result = server.increment(graphToJSON(root))
 
-print("graph after increment")
-root.show()
+jsonString = graphToJSON(root)
 
-# "!dlroW olleH"
 
+JSONToGraph(jsonString).show()
+
+print('time to run this shit\n\n\n\n')
+result = server.increment(jsonString)
 print(result)
+result = JSONToGraph(result)
+print("graph after increment")
+result.show()
 
 print(server.nop({1:[2,3]}))
 
 rpc.close() # Closes the socket 's' also
-
-
